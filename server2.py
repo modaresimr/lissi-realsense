@@ -38,8 +38,11 @@ class Handler(BaseHTTPRequestHandler):
 				msg=f'size={self.convert_bytes(siz)}'
 				self.wfile.write(bytes(msg,"utf-8"))
 				#for closing old file
-				loc['camdev'].connect(save_path='t.bag')
-				loc['camdev'].stop();
+				try:
+					loc['camdev'].debug=0
+					loc['camdev'].connect(save_path='nul')
+					loc['camdev'].stop();
+				except:pass
 			elif url.path=='/ping':
 				self.send_response(200)
 				self.send_header("Content-type", "text/html")
