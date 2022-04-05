@@ -38,9 +38,8 @@ class Handler(BaseHTTPRequestHandler):
 				msg=f'size={self.convert_bytes(siz)}'
 				self.wfile.write(bytes(msg,"utf-8"))
 				#for closing old file
-				t=RealSense("usb",debug=1)
-				t.connect(save_path='t.bag')
-				t.stop();
+				loc['camdev'].connect(save_path='t.bag')
+				loc['camdev'].stop();
 			elif url.path=='/ping':
 				self.send_response(200)
 				self.send_header("Content-type", "text/html")
