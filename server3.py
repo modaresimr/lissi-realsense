@@ -13,7 +13,7 @@ loc = {}
 
 def video_recorder(name,q,save_path,profile):
 	import cv2
-	codec = cv2.VideoWriter.fourcc(*'h264')
+	codec = cv2.VideoWriter.fourcc(*'avc1')
 	vw=cv2.VideoWriter(f'{save_path}/{name}.mp4',codec, profile['fps'], (profile['width'], profile['height']),profile['is_color'])
 	i=0
 	while True:
