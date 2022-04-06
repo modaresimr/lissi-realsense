@@ -50,7 +50,7 @@ def record_remote_test(cam):
 
 		import requests
 		try:
-			r = requests.get(url = f"http://{cams[cam]}:8080/")
+			r = requests.get(url = f"http://{cams[cam]}:8080/ping")
 			print(f'{cam}-{r.content}')
 		except Exception as e:
 			print(f'{cam}-{e}')
@@ -91,6 +91,6 @@ if sys.argv[1]=="stop":
 		print(f'ok {p}')
 
 
-if sys.argv[1]=="test":
+if sys.argv[1]=="ping":
 	for p in parallelRunner(1,record_remote_test,cams.keys()):
 		print(f'ok {p}')
