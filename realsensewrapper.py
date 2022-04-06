@@ -84,7 +84,7 @@ class RealSense:
         if not depth_frame or not color_frame:
             if self.debug:print('error color or depth frame not received')
             return
-        depth_frame = self.post_processing_depth(depth_frame)
+        # depth_frame = self.post_processing_depth(depth_frame)
 
         if colorize:
             depth_color_frame = self.colorizer.colorize(depth_frame)
