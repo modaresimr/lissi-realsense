@@ -27,7 +27,7 @@ def video_recorder(name,q,save_path,profile):
 			img = cv2.applyColorMap(cv2.convertScaleAbs(img, alpha=0.03), cv2.COLORMAP_JET)
 		vw.write(img)
 		q.task_done()
-		if i%1000==0:
+		if i%200==0:
 			print(f'{name} frame loss={max(0,(n-i))*100/n:.0f}')
 	vw.release()
 
