@@ -22,6 +22,7 @@ class RealSense:
             if debug: print(list(ctx.query_devices()));
             dev=ctx.query_devices()[0];
         else:
+            import pyrealsense_net as rsnet
             dev = rsnet.net_device(ip)
             dev.add_to(ctx)
 
@@ -42,6 +43,9 @@ class RealSense:
         self.pipeline = rs.pipeline(ctx)
         config = rs.config()
         config.enable_stream(rs.stream.color, color_profile['width'], color_profile['height'], color_profile['format'], color_profile['fps'])
+        
+
+
         if self.depth:
             config.enable_stream(rs.stream.depth, depth_profile['width'], depth_profile['height'], depth_profile['format'], depth_profile['fps'])
         if self.infrared:
@@ -53,15 +57,17 @@ class RealSense:
         
         
         self.profile= self.pipeline.start(config)
-        self.colorizer=rs.colorizer()
-        holefilter=rs.temporal_filter()
-        holefilter.set_option(rs.option.holes_fill, 1);
-        self.filters = [
-            # rs.decimation_filter (),
-            rs.spatial_filter(),
-            rs.temporal_filter(),
-            holefilter
-        ]
+        # sensor_color = self.profile.get_device().first_color_sensor()
+        # sensor_color.set_option(rs.option.enable_auto_exposure, True)
+        # self.colorizer=rs.colorizer()
+        # holefilter=rs.temporal_filter()
+        # holefilter.set_option(rs.option.holes_fill, 1);
+        # self.filters = [
+        #     # rs.decimation_filter (),
+        #     rs.spatial_filter(),
+        #     rs.temporal_filter(),
+        #     holefilter
+        # ]
         
 
     def readFromFile(self,bagfile):
@@ -76,7 +82,12 @@ class RealSense:
 
     def waitForFrame(self,colorize=True):
         import numpy as np
-        frames = self.pipeline.wait_for_frames()
+        try:
+            frames = self.pipeline.wait_for_frames(100)
+        except:
+            return 
+        
+        # print(f"{frames}")
         if self.depth:
             depth_frame = frames.get_depth_frame()
         color_frame = frames.get_color_frame()
@@ -84,8 +95,9 @@ class RealSense:
             infrared_frame1 = frames.get_infrared_frame(1)
             infrared_frame2 = frames.get_infrared_frame(2)
         
-        if  not color_frame:
-            if self.debug:print('error color  frame not received')
+        if  not color_frame or (self.depth and not depth_frame):
+            //if self.debug:print(f'error color {color_frame} or depth {depth_frame} frame not received')
+            if self.debug:print(f'error color {color_frame} frame not received')
             return
         # depth_frame = self.post_processing_depth(depth_frame)
         if self.depth:
@@ -143,12 +155,14 @@ class RealSense:
         
         res={}
         res['Color']=self.get_best_profile(all_profiles,'Color')
+        dep_p=None
         if self.depth:
             res['Depth']=self.get_best_profile(all_profiles,'Depth')
+            dep_p=res['Depth']
         if self.infrared:
-            res['Infrared1']=self.get_best_profile(all_profiles,'Infrared 1',res['Depth'])
-            res['Infrared2']=self.get_best_profile(all_profiles,'Infrared 2',res['Depth'])
-        
+            res['Infrared1']=self.get_best_profile(all_profiles,'Infrared 1',dep_p)
+            res['Infrared2']=self.get_best_profile(all_profiles,'Infrared 2',dep_p)
+        print(res)
         return res
 
     def get_best_profile(self,all_profiles,typ,match_profile=None):
