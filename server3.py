@@ -40,7 +40,7 @@ def worker():
 	cam.connect()
 	streams=cam.selected_profiles
 
-	qs={s:JoinableQueue(10) for s in streams}
+	qs={s:JoinableQueue(1000) for s in streams}
 	prcs={s: Process(name=s,target=video_recorder, args=(s,qs[s],loc['save_path'],streams[s])) for s in streams}
 	# prcs={s: Process(target=video_recorder, args=(None,None,None,None)) for s in streams}
 	for p in prcs:
