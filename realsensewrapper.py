@@ -95,8 +95,9 @@ class RealSense:
             infrared_frame1 = frames.get_infrared_frame(1)
             infrared_frame2 = frames.get_infrared_frame(2)
         
-        if  not color_frame or (self.depth and not depth_frame):
-            //if self.debug:print(f'error color {color_frame} or depth {depth_frame} frame not received')
+        if self.depth and not depth_frame:
+            if self.debug:print(f'error depth {depth_frame} frame not received')
+        if not color_frame:
             if self.debug:print(f'error color {color_frame} frame not received')
             return
         # depth_frame = self.post_processing_depth(depth_frame)
