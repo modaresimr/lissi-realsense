@@ -1,59 +1,39 @@
 
-
 cams={
-'cam1':'10.12.20.211',
+# 'cam3':'10.12.20.211',
+# 'cam2':'127.0.0.1',
+#  'cam4':'10.12.20.76',
+#  'cam1':'10.12.20.102',
+'cam3':'192.168.137.34',
 'cam2':'127.0.0.1',
- 'cam3':'10.12.20.76',
- 'cam4':'10.12.20.102',
+ 'cam4':'192.168.137.146',
+ 'cam1':'192.168.137.184',
 }
 
-
-import sys
-if len(sys.argv)==1:
-	print(f'usage: \n{sys.argv[0]} start user act prefix_path\n{sys.argv[0]} stop')
-	sys.exit(1)
-
-#     print(p)
-
-
-
-
+import os
 from datetime import datetime
 dt_string = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+import sys
 
 
 
 
-def record_remote_start(cam):
-	import requests
 
-	try:
-		path=f'{prefix_path}/{user}/{act}/{dt_string}/{cam}'
-		r = requests.get(url = f"http://{cams[cam]}:8080/start?path={path}")
-		print(f'{cam}-{r.content}')
-		# return f'{cam}-{r}'
-	except Exception as e:
-		print(f'{cam}-{e}')
-		
 
-def record_remote_stop(cam):
+
+
+
+def remote_call(cam,path):
 	import requests
 	try:
-		r = requests.get(url = f"http://{cams[cam]}:8080/stop")
-		print(f'{cam}-{r.content}')
+		r = requests.get(url = f"http://{cams[cam]}:8080/{path}",timeout=3)
+		return r.content
+		# print(f'{cam}-{r.content}')
 	except Exception as e:
-		print(f'{cam}-{e}')
-
+		# print(f'{cam}-{e}')
+		return e
 	# return f'{cam}-{r}'
 
-def record_remote_test(cam):
-
-		import requests
-		try:
-			r = requests.get(url = f"http://{cams[cam]}:8080/ping")
-			print(f'{cam}-{r.content}')
-		except Exception as e:
-			print(f'{cam}-{e}')
 
 import multiprocessing
 def parallelRunner(parallel, runner, items):
@@ -63,9 +43,9 @@ def parallelRunner(parallel, runner, items):
         pool = ThreadPool(min(8,len(items)))
         result = pool.imap(runner, items)
         try:
-            for _ in items:
+            for item in items:
                 res = result.next()
-                yield res
+                yield item, res
         except KeyboardInterrupt:
             pool.terminate()
             pool.join()
@@ -74,23 +54,53 @@ def parallelRunner(parallel, runner, items):
     else:
         for item in items:
             res = runner(item)
-            yield res
+            yield item,res
+
+def printRemoteStatus():
+	import time
+	try:
+		while 1:
+			
+			for i,(cam,p) in enumerate(parallelRunner(1,lambda cam:remote_call(cam,"status"),cams.keys())):
+				if i==0:os.system('cls')
+				print(f'{cam}-{p}\n')
+			time.sleep(1)
+	except KeyboardInterrupt:
+		pass
 
 
-from multiprocessing import Process, freeze_support
-freeze_support()
-if sys.argv[1]=="start":
-	user=sys.argv[2]
-	act=sys.argv[3]
-	prefix_path=sys.argv[4]
-	for p in parallelRunner(1,record_remote_start,cams.keys()):
-		print(f'ok {p}')
+if __name__ == "__main__":
+	if len(sys.argv)==1:
+		print(f'usage: \n{sys.argv[0]} start user act prefix_path\n{sys.argv[0]} stop')
+		sys.exit(3)
 
-if sys.argv[1]=="stop":
-	for p in parallelRunner(1,record_remote_stop,cams.keys()):
-		print(f'ok {p}')
+	from multiprocessing import Process, freeze_support
+	freeze_support()
+	if sys.argv[1]=="start":
+		user=sys.argv[2]
+		act=sys.argv[3]
+		prefix_path=sys.argv[4]
+		path=f'start?path={prefix_path}/{user}/{act}/{dt_string}/'
+		for cam,p in parallelRunner(1,lambda cam:remote_call(cam,path+cam),cams.keys()):
+			print(f'{cam}-{p}')
+		os.system('start python.exe runall.py status')
+
+	if sys.argv[1]=="stop":
+		for cam,p in parallelRunner(1,lambda cam:remote_call(cam,"stop"),cams.keys()):
+			print(f'{cam}-{p}')
+
+	if sys.argv[1]=="status":
+		printRemoteStatus()
+
+	if sys.argv[1]=="ping":
+		for cam,p in parallelRunner(1,lambda cam:remote_call(cam,"ping"),cams.keys()):
+			print(f'{cam}-{p}')
+
+	if sys.argv[1]=='image':
+		[print(f'http://{cams[cam]}:8080/image') for cam in cams]
+	if sys.argv[1]=="update":
+		for cam,p in parallelRunner(1,lambda cam:remote_call(cam,"update"),cams.keys()):
+			print(f'{cam}-{p}')
 
 
-if sys.argv[1]=="ping":
-	for p in parallelRunner(1,record_remote_test,cams.keys()):
-		print(f'ok {p}')
+	

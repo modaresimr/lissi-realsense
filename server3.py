@@ -1,4 +1,5 @@
-
+from dataclasses import replace
+import psutil
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import time, threading
@@ -13,11 +14,17 @@ import cv2
 print('y')
 
 def video_recorder(name,q,save_path,profile):
-	print(f'start recording {name}')
+	if profile['type']=='Color':psutil.Process().cpu_affinity([2,3])
+	if profile['type']=='Depth':psutil.Process().cpu_affinity([4,5])
+	if 'Infrared' in profile['type']: psutil.Process().cpu_affinity([6,7])
+
+	print(f'start recording {name} in cpu={psutil.Process().cpu_affinity()}')
 	import numpy as np
-	codec = cv2.VideoWriter.fourcc(*'avc1')
+	# codec = cv2.VideoWriter.fourcc(*'avc1')
+	# codec = cv2.VideoWriter.fourcc(*'MJPG')
+	codec = cv2.VideoWriter.fourcc(*'DIVX')
 	
-	vw=cv2.VideoWriter(f'{save_path}/{name}.mp4',codec, profile['fps'], (profile['width'], profile['height']),profile['is_color'])
+	vw=cv2.VideoWriter(f'{save_path}/{name}.avi',codec, profile['fps'], (profile['width'], profile['height']),profile['is_color'])
 	# vw.write(np.zeros(profile['width'], profile['height'],3))
 	while True:
 	
@@ -26,7 +33,7 @@ def video_recorder(name,q,save_path,profile):
 		if n==-1:
 			q.task_done()
 			break
-		
+		# cv2.imshow(name,img)
 		if name=='Depth':
 			img = cv2.applyColorMap(cv2.convertScaleAbs(img, alpha=0.03), cv2.COLORMAP_JET)
 		vw.write(img)
@@ -34,131 +41,171 @@ def video_recorder(name,q,save_path,profile):
 		
 	vw.release()
 
-
-def worker():
-	cam=RealSense("usb",debug=1,infrared=0,depth=1)
-	cam.connect()
-	streams=cam.selected_profiles
-
-	qs={s:JoinableQueue(1000) for s in streams}
-	prcs={s: Process(name=s,target=video_recorder, args=(s,qs[s],loc['save_path'],streams[s])) for s in streams}
-	# prcs={s: Process(target=video_recorder, args=(None,None,None,None)) for s in streams}
-	for p in prcs:
-		prcs[p].daemon=True
-		prcs[p].start()
-	i=0
-	
-	import time
-	start_time = time.time()
-	while loc['working']:
-		frames = cam.waitForFrame(colorize=False)
+class VideoCapture:
+	def __init__(self,save_path):
+		self.save_path=save_path
+		import  shutil
+		if os.path.exists(save_path):shutil.rmtree(save_path)
+		os.makedirs(save_path,exist_ok=True)		
+		# cam=RealSense("webcam",debug=1,infrared=0,depth=1)
+		self.cam=RealSense("webcam",debug=1,infrared=0,depth=0)
+		# self.cam.connect()
+		self.streams=self.cam.selected_profiles
 		
-		if frames is None:
-			time.sleep(0.1)
-			continue
-		i+=1
-		n=frames['frame']
-		if i%30==0 or i<5 and n!=0:
-			print(f"{(time.time() - start_time):0.0f}s frame={n} queue={max([qs[s].qsize() for s in qs])} frame_loss={max(0,(n-i))*100/n:.0f}%",end='\r')
-		for s in streams:
-			qs[s].put((n,frames[s]))	
-	cam.stop()	
-	for s in streams:qs[s].put((-1,'eof')) 
-	# for s in streams: qs[s].join()
-	for s in streams:prcs[s].join()
+		# prcs={s: Process(target=video_recorder, args=(None,None,None,None)) for s in streams}
+		self.info={
+				'recorded_frame':0,
+				'camera_frame':0,
+				'current_time':0,
+				'fps':0,
+				'frame_in_q':0,
+				'frame_loss':0,
+				'size':0
+		}
+	
+	
+	def start(self):
+		self.qs={s:JoinableQueue(1000) for s in self.streams}
+		self.prcs={s: Process(name=s,target=video_recorder, args=(s,self.qs[s],self.save_path,self.streams[s])) for s in self.streams}
+		for p in self.prcs:
+			self.prcs[p].daemon=True
+			self.prcs[p].start()
+		self.working=True
+		self.thread = threading.Thread(target=self.worker, name='VideoCapture', args=())
+		self.thread.daemon = True
+		self.thread.start()
+		
+		return self
+
+	def stop(self):
+		self.working=False
+		self.cam.stop()	
+		for s in self.streams:self.qs[s].put((-1,'eof')) 
+		self.thread.join()
+	def kill(self):
+		self.cam.stop()	
+		for s in self.streams:self.prcs[s].terminate() 
+
+		
+	def worker(self):
+		cam=self.cam;qs=self.qs;prcs=self.prcs;streams=self.cam.selected_profiles
+		i=0
+		import time
+		start_time = time.time()
+		while self.working:
+			frames = cam.waitForFrame(colorize=False)
+			
+			if frames is None:
+				time.sleep(0.1)
+				continue
+			i+=1
+			n=frames['frame']
+			self.info={
+				'recorded_frame':i,
+				'camera_frame':n,
+				'current_time':int(time.time() - start_time),
+				'fps':int(i/(time.time() - start_time)),
+				'frame_in_q':sum([qs[s].qsize() for s in qs]),
+				'frame_loss':max(0,(n-i))*100/max(1,n),
+				'size':convert_bytes(get_folder_size(self.save_path))
+			}
+			
+			if i%30==0 or i<10:
+				print(f"{self.info['current_time']:0.0f}s \tframe={n} \tqueue={self.info['frame_in_q']} \tframe_loss={self.info['frame_loss']:.0f}% size={self.info['size']}",end='\r')
+			for s in streams:
+				qs[s].put((n,frames[s]))	
+		
+		# for s in streams: qs[s].join()
+		for s in streams:prcs[s].join()
 		
 
 
 
 def stopRecording():
-	loc['working']=0
-	# if 'camdev' in loc:
-	# 	loc['camdev'].stop()
-		#for closing old file
-		# try:
-		# 	loc['camdev'].debug=0
-		# 	loc['camdev'].connect(save_path='nul')
-		# 	loc['camdev'].stop();
-		# except:pass
+	loc['videocapture'].stop()
+	del loc['videocapture']
 
-	if 'thread' in loc:
-		loc['thread'].join()
-		del loc['thread']
 
 
 def startRecording(path):
-	import  shutil
-	if os.path.exists(path):
-		shutil.rmtree(path)
-	os.makedirs(path,exist_ok=True)	
-	loc['working']=1
-	# loc['camdev']=RealSense("usb",debug=1,infrared=0,depth=1)
+	loc['videocapture']=VideoCapture(path).start()	
 	loc['save_path']=f'{path}'
-	# loc['camdev'].connect()#save_path=f'{path}/full.bag')
-	# print(loc['camdev'].waitForFrame(colorize=False))
-	# print(loc['camdev'].selected_profiles)
-	# Turn-on the worker thread.\
-	# loc['working']=1
-	loc['thread']=threading.Thread(target=worker, daemon=True)
-	loc['thread'].start()
-	# loc['thread'].join()
 
 class Handler(BaseHTTPRequestHandler):
-	
+	def reply(self,msg,type="text/html"):
+		self.send_response(200)
+		self.send_header("Content-type", type)
+		self.end_headers()
+		self.wfile.write(bytes(msg,"utf-8"))
+
 	def do_GET(self):
 		try:
-			print("do")
-			print(self.path)
+			
 			url=urlparse(self.path)
+			# if url.path!='/status':print(self.path)
 			# loc=self.loc
 			if url.path=='/start':
-				if 'thread' in loc: stopRecording()
+				if 'videocapture' in loc: stopRecording()
 				query = url.query
 				args = dict(qc.split("=") for qc in query.split("&"))
 				path=args.get('path','test')
-				
 				startRecording(path)
-				self.send_response(200)
-				self.send_header("Content-type", "text/html")
-				self.end_headers()
-				msg=f"to end click on <a href='/stop'>/stop</a> "
-				self.loc=loc
-				self.wfile.write(bytes(msg,"utf-8"))
-				
+				self.reply(f"<a href='/status'>/status</a> to end click on <a href='/stop'>/stop</a> ")
+			elif url.path=='/status':
+				if 'videocapture' not in loc: 
+					self.reply('not started')
+					return
+				import json
+				self.reply(json.dumps(loc['videocapture'].info),'application/json')
+			elif url.path=='/image':
+				import base64
+				cam=RealSense("webcam",debug=1,infrared=0,depth=0)
+				cam.start()
+				frames=cam.waitForFrame(colorize=True)
+				cam.stop()
+				resp=''
+				for s in cam.selected_profiles:
+					_,img = cv2.imencode('.jpeg', frames[s])
+					bimg=base64.b64encode(img.tobytes()).decode("ascii")
+					resp+=f'<div>{s}<br/><img src="data:image/jpeg;base64,{bimg}"/></div>'
+				self.reply(resp)
 			elif url.path=='/stop':
+				if 'videocapture' not in loc: 
+					self.reply('not started')
+					return
 				stopRecording()
 				siz=get_folder_size(loc['save_path'])
-				self.send_response(200)
-				self.end_headers()
-				msg=f'size={convert_bytes(siz)}'
-				self.wfile.write(bytes(msg,"utf-8"))
+				self.reply(f'size={convert_bytes(siz)}')
+				
 			elif url.path=='/ping':
-				self.send_response(200)
-				self.send_header("Content-type", "text/html")
-				self.end_headers()
-				msg=f'ok'
-				self.wfile.write(bytes(msg,"utf-8"))
+				self.reply(f'ok')
+			elif url.path=='/update':
+				import os
+				import sys
+				output = os.popen('git pull').read()
+				print(output)
+				self.reply(output)
+				self.wfile.flush()
+				httpd.server_close()
+				os.execl(sys.executable, os.path.abspath(__file__),*sys.argv)
+				import time
+				time.sleep(1)
+				kill()
 			else:
-				self.send_response(200)
-				self.end_headers()
-				msg="""
-					<a href="/start?path=test">/start?path=test</a> 
-					<br/>
-					<a href="/stop">/stop</a>
-				"""
-				self.wfile.write(bytes(msg,"utf-8"))
+				self.reply("""
+					<a href="/start?path=test">/start?path=test</a> <br/>
+					<a href="/status">/status</a><br/>
+					<a href="/stop">/stop</a><br/>
+					<a href="/stop">/update</a><br/>
+					<a href="/image">/image</a><br/>
+				""")
+				
 		except Exception as e:
 				import traceback
-				self.send_response(500)
-				self.end_headers()
-				msg=f"""
-		
-<pre>
+				self.reply(f"""<pre>
 error: {e!r}
 {traceback.format_exc()}
-</pre>
-				"""
-				self.wfile.write(bytes(msg,"utf-8"))
+</pre>""")
 		self.wfile.flush()
 
 def get_folder_size(start_path):
@@ -180,7 +227,13 @@ def convert_bytes(num):
 			return "%3.1f %s" % (num, x)
 		num /= 1024.0
 
+def kill():
+	if 'videocapture' in loc:
+		loc['videocapture'].kill()
+	psutil.Process().kill()
 if __name__ == "__main__":
+	psutil.Process().cpu_affinity([0,1])
+	
 	print('a')
 	httpd = HTTPServer( ("0.0.0.0", 8080), Handler)
 	print('b')
@@ -189,7 +242,10 @@ if __name__ == "__main__":
 		print('c')
 	except KeyboardInterrupt as e2:
 		print(e2)
-		stopRecording()
+		# psutil.Process().kill()
+		kill()
+		# stopRecording()
+
 		
 	except Exception as e:
 		print(e)
