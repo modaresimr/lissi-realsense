@@ -47,8 +47,8 @@ class VideoCapture:
 		import  shutil
 		if os.path.exists(save_path):shutil.rmtree(save_path)
 		os.makedirs(save_path,exist_ok=True)		
-		# cam=RealSense("webcam",debug=1,infrared=0,depth=1)
-		self.cam=RealSense("webcam",debug=1,infrared=0,depth=0)
+		# cam=RealSense("usb",debug=1,infrared=0,depth=1)
+		self.cam=RealSense("usb",debug=1,infrared=0,depth=0)
 		# self.cam.connect()
 		self.streams=self.cam.selected_profiles
 		
@@ -159,7 +159,7 @@ class Handler(BaseHTTPRequestHandler):
 				self.reply(json.dumps(loc['videocapture'].info),'application/json')
 			elif url.path=='/image':
 				import base64
-				cam=RealSense("webcam",debug=1,infrared=0,depth=0)
+				cam=RealSense("usb",debug=1,infrared=0,depth=0)
 				cam.start()
 				frames=cam.waitForFrame(colorize=True)
 				cam.stop()
