@@ -4,10 +4,10 @@ cams={
 # 'cam2':'127.0.0.1',
 #  'cam4':'10.12.20.76',
 #  'cam1':'10.12.20.102',
-'cam3':'192.168.137.34',
+'cam1':'192.168.137.34',
 'cam2':'127.0.0.1',
- 'cam4':'192.168.137.146',
- 'cam1':'192.168.137.184',
+ 'cam3':'192.168.137.146',
+ 'cam4':'192.168.137.184',
 }
 
 import os
@@ -102,5 +102,9 @@ if __name__ == "__main__":
 		for cam,p in parallelRunner(1,lambda cam:remote_call(cam,"update"),cams.keys()):
 			print(f'{cam}-{p}')
 
+	if sys.argv[1]=="command":
+		cmd=' '.join(sys.argv[2:])
+		for cam,p in parallelRunner(1,lambda cam:remote_call(cam,f"command?{cmd}"),cams.keys()):
+			print(f'{cam}-{p}')
 
 	

