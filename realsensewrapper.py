@@ -100,18 +100,18 @@ class RealSense:
             pass
         # sensor_depth.set_option(rs.option.enable_auto_white_balance, 0)
         self.colorizer=rs.colorizer()
-        # holefilter=rs.temporal_filter()
-        # holefilter.set_option(rs.option.holes_fill, 1);
-        # self.filters = [
-        #     # rs.decimation_filter (),
-        #     rs.spatial_filter(),
-        #     rs.temporal_filter(),
-        #     holefilter
-        # ]
+        holefilter=rs.temporal_filter()
+        holefilter.set_option(rs.option.holes_fill, 1);
+        self.filters = [
+            rs.decimation_filter (),
+            rs.spatial_filter(),
+            # rs.temporal_filter(),
+            # holefilter
+        ]
         
  
 
-    def waitForFrame(self,colorize=True):
+    def waitForFrame(self,colorize=True,postprocess=False):
         if self.src=='webcam':
             _,c=self.cam.read()
             return {'Color':c,'frame':1}
@@ -142,17 +142,24 @@ class RealSense:
         if not color_frame:
             if self.debug:print(f'error color {color_frame} frame not received')
             return
-        # depth_frame = self.post_processing_depth(depth_frame)
+
+        
         if self.depth:
+            if postprocess:
+                print(np.asanyarray(depth_frame.get_data()).shape)
+                depth_frame = self.post_processing_depth(depth_frame)
+                
             if colorize:
                 depth_color_frame = self.colorizer.colorize(depth_frame)
             else: 
                 depth_color_frame = depth_frame
         
 
+
         res={}
         if self.depth:
             res['Depth'] = np.asanyarray(depth_color_frame.get_data())
+            print(res['Depth'].shape)
         
         res['Color'] = np.asanyarray(color_frame.get_data())
         if self.infrared:
