@@ -1,18 +1,14 @@
 from dataclasses import replace
 import psutil
+import utils
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import time, threading
 from multiprocessing import Process, JoinableQueue
 import os
-from urllib.parse import urlparse
-print('starting...')
 from realsensewrapper import RealSense
-loc = {}
 import cv2
-# from video_capture import VideoCapture
-import utils
-only_bag_file=1#False
+
 class VideoCapture:
 	def __init__(self,save_path,only_bag_file):
 		self.only_bag_file=only_bag_file
@@ -130,115 +126,3 @@ def video_recorder(name,q,save_path,profile):
 		q.task_done()
 		
 	vw.release()
-
-def stopRecording():
-	loc['videocapture'].stop()
-	del loc['videocapture']
-
-def startRecording(path):
-	loc['videocapture']=VideoCapture(path,only_bag_file).start()
-	loc['save_path']=f'{path}'
-
-class Handler(BaseHTTPRequestHandler):
-	def reply(self,msg,type="text/html"):
-		self.send_response(200)
-		self.send_header("Content-type", type)
-		self.end_headers()
-		self.wfile.write(bytes(msg,"utf-8"))
-
-	def do_GET(self):
-		try:
-			
-			url=urlparse(self.path)
-			# if url.path!='/status':print(self.path)
-			# loc=self.loc
-			if url.path=='/start':
-				if 'videocapture' in loc: stopRecording()
-				query = url.query
-				args = dict(qc.split("=") for qc in query.split("&"))
-				path=args.get('path','test')
-				startRecording(path)
-				self.reply(f"<a href='/status'>/status</a> to end click on <a href='/stop'>/stop</a> ")
-			elif url.path=='/status':
-				if 'videocapture' not in loc: 
-					self.reply('not started')
-					return
-				import json
-				self.reply(json.dumps(loc['videocapture'].info),'application/json')
-			elif url.path=='/image':
-				import base64
-				cam=RealSense("usb",debug=1,infrared=0,depth=0)
-				cam.start()
-				for i in range(100):
-					frames=cam.waitForFrame(colorize=True)
-					if frames:break
-				
-				cam.stop()
-				resp=''
-				for s in cam.selected_profiles:
-					_,img = cv2.imencode('.jpeg', frames[s])
-					bimg=base64.b64encode(img.tobytes()).decode("ascii")
-					resp+=f'<div>{s}<br/><img src="data:image/jpeg;base64,{bimg}"/></div>'
-				self.reply(resp)
-			elif url.path=='/stop':
-				if 'videocapture' not in loc: 
-					self.reply('not started')
-					return
-				stopRecording()
-				
-				self.reply(f'size={utils.get_pretty_folder_size(loc["save_path"])}')
-				
-			elif url.path=='/ping':
-				self.reply(f'ok')
-			elif url.path=='/update':
-				import os
-				import sys
-				output = os.popen('git pull').read()
-				print(output)
-				self.reply(output)
-				self.wfile.flush()
-				httpd.server_close()
-				os.execl(sys.executable, os.path.abspath(__file__),*sys.argv)
-				import time
-				time.sleep(1)
-				kill()
-			else:
-				self.reply("""
-					<a href="/start?path=test">/start?path=test</a> <br/>
-					<a href="/status">/status</a><br/>
-					<a href="/stop">/stop</a><br/>
-					<a href="/stop">/update</a><br/>
-					<a href="/image">/image</a><br/>
-				""")
-				
-		except Exception as e:
-				import traceback
-				self.reply(f"""<pre>
-error: {e!r}
-{traceback.format_exc()}
-</pre>""")
-		self.wfile.flush()
-
-def kill():
-	if 'videocapture' in loc:
-		loc['videocapture'].kill()
-	psutil.Process().kill()
-if __name__ == "__main__":
-	psutil.Process().cpu_affinity([0,1])
-	
-	print('a')
-	httpd = HTTPServer( ("0.0.0.0", 8080), Handler)
-	print('b')
-	try:
-		httpd.serve_forever()
-		print('c')
-	except KeyboardInterrupt as e2:
-		print(e2)
-		kill()
-		
-	except Exception as e:
-		print(e)
-	print('d')
-	httpd.server_close()
-
-

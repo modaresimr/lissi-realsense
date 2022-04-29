@@ -1,23 +1,26 @@
 import pyrealsense2 as rs
-
+import os
 
 class RealSense:
 
-    def __init__(self,ip,debug=0,infrared=0,depth=0):
+    def __init__(self,src,debug=0,infrared=0,depth=0,save_to_file=None):
         self.debug=debug;
-        self.ip=ip
+        self.src=src
         self.infrared=infrared
         self.depth=depth
+        self.save_to_file=save_to_file
+        self.current_frame=0
+        self.is_file=False
         self.connect()
 
     def connect(self):
         ctx = rs.context()
 
         debug=self.debug
-        ip=self.ip
+        src=self.src
 
-        if debug:print ('Connecting to ' + ip)
-        if (ip=='webcam'):
+        if debug:print ('Connecting to ' + src)
+        if (src=='webcam'):
             import cv2
             self.cam=cv2.VideoCapture(0)
             # self.cam=cv2.VideoCapture("C:/data-ar/kmoulouel/walking/06-04-2022-16-23-07/cam2/Color.mp4")
@@ -26,38 +29,41 @@ class RealSense:
             h = f.shape[0]
 
             self.selected_profiles={'Color':{
-            'width':w,
-            'height':h,
-            'fps':30,
-            'format':0,
-            'res':w*h,
-            'type':'Color',
-            'is_color':True
+            'width':w,'height':h,
+            'fps':30,'format':0,'res':w*h,
+            'type':'Color','is_color':True
             }}
             print(self.selected_profiles)
             return
-        elif (ip=='usb'):
-            dev=rs.device();
+        elif (src=='usb'):
             if debug: print(list(ctx.query_devices()));
-            dev=ctx.query_devices()[0];
+            self.dev=ctx.query_devices()[0];
+        elif (os.path.isfile(src)):
+            self.is_file=True
+            if debug: print(f"reading bag file {src}")
+            self.dev=ctx.load_device(src)
+            self.dev.set_real_time(False)#Needed so frames don't get dropped during processing:
+
         else:
             import pyrealsense_net as rsnet
-            dev = rsnet.net_device(ip)
-            dev.add_to(ctx)
+            self.dev = rsnet.net_device(src)
+            self.dev.add_to(ctx)
 
+        self.selected_profiles=self.find_profiles(self.dev)
         if debug: print ('Connected')
-        if debug: print ('Using device 0,', dev.get_info(rs.camera_info.name), ' Serial number: ', dev.get_info(rs.camera_info.serial_number))
-
-        self.selected_profiles=self.find_profiles(dev)
+        if debug: print ('Using device 0,', self.dev.get_info(rs.camera_info.name), ' Serial number: ', self.dev.get_info(rs.camera_info.serial_number))
         
         
         if debug: print(f'selected profiles: {self.selected_profiles}')
 
     def start(self):
-        if self.ip=="webcam":return
+        if self.src=="webcam":return
         ctx = rs.context()
         self.pipeline = rs.pipeline(ctx)
         config = rs.config()
+        if os.path.isfile(self.src):
+            rs.config.enable_device_from_file(config,self.src)
+
         color_profile=self.selected_profiles['Color']
         if self.depth:
             depth_profile=self.selected_profiles['Depth']
@@ -74,13 +80,26 @@ class RealSense:
             config.enable_stream(rs.stream.infrared,1, infrared_profile1['width'], infrared_profile1['height'], infrared_profile1['format'], infrared_profile1['fps'])
             config.enable_stream(rs.stream.infrared,2, infrared_profile2['width'], infrared_profile2['height'], infrared_profile2['format'], infrared_profile2['fps'])
 
-        # if save_path:config.enable_record_to_file(save_path)
+        if self.save_to_file:config.enable_record_to_file(self.save_to_file)
         
         
         self.profile= self.pipeline.start(config)
-        # sensor_color = self.profile.get_device().first_color_sensor()
-        # sensor_color.set_option(rs.option.enable_auto_exposure, True)
-        # self.colorizer=rs.colorizer()
+        sensor_color = self.profile.get_device().first_color_sensor()
+        sensor_depth = self.profile.get_device().first_depth_sensor()
+        try:
+            sensor_color.set_option(rs.option.enable_auto_exposure, 0)
+            sensor_depth.set_option(rs.option.enable_auto_exposure, 0)
+            sensor_color.set_option(rs.option.enable_auto_white_balance, 0)
+            sensor_color.set_option(rs.option.exposure, 312)
+            sensor_depth.set_option(rs.option.exposure, 8000)
+            sensor_depth.set_option(rs.option.laser_power, 360)
+
+        except Exception as e:
+            print(e)
+            # raise e
+            pass
+        # sensor_depth.set_option(rs.option.enable_auto_white_balance, 0)
+        self.colorizer=rs.colorizer()
         # holefilter=rs.temporal_filter()
         # holefilter.set_option(rs.option.holes_fill, 1);
         # self.filters = [
@@ -90,24 +109,23 @@ class RealSense:
         #     holefilter
         # ]
         
-
-    def readFromFile(self,bagfile):
-        self.pipeline = rs.pipeline()
-        # Create a config object
-        config = rs.config()
-        rs.config.enable_device_from_file(config,bagfile)
-        config.enable_all_streams()
-        self.pipeline.start(config)
-        self.colorizer=rs.colorizer()
-        self.selected_profiles=self.find_profiles(pipeline=self.pipeline)
+ 
 
     def waitForFrame(self,colorize=True):
-        if self.ip=='webcam':
+        if self.src=='webcam':
             _,c=self.cam.read()
             return {'Color':c,'frame':1}
         import numpy as np
         try:
-            frames = self.pipeline.wait_for_frames(100)
+            if self.is_file: 
+                self.dev.resume()
+                frame_present,frames = self.pipeline.try_wait_for_frames(5000)
+                if not frame_present or self.current_frame-50>frames.get_frame_number():
+                    return 'eof'
+                self.dev.pause()
+                self.current_frame=frames.get_frame_number()
+            else:
+                frames = self.pipeline.wait_for_frames(100)
         except:
             return 
         
@@ -158,7 +176,7 @@ class RealSense:
 
 
     def stop(self):
-        if self.ip=='webcam':
+        if self.src=='webcam':
             self.cam.release()
         else:
             self.pipeline.stop();
