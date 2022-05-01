@@ -1,10 +1,11 @@
 import pyrealsense2 as rs
 import os
-
+import utils
+import numpy as np
 class RealSense:
 
     def __init__(self,src,debug=0,infrared=0,depth=0,save_to_file=None):
-        self.debug=debug;
+        self.debug=debug
         self.src=src
         self.infrared=infrared
         self.depth=depth
@@ -42,7 +43,7 @@ class RealSense:
             self.is_file=True
             if debug: print(f"reading bag file {src}")
             self.dev=ctx.load_device(src)
-            self.dev.set_real_time(False)#Needed so frames don't get dropped during processing:
+
 
         else:
             import pyrealsense_net as rsnet
@@ -52,17 +53,20 @@ class RealSense:
         self.selected_profiles=self.find_profiles(self.dev)
         if debug: print ('Connected')
         if debug: print ('Using device 0,', self.dev.get_info(rs.camera_info.name), ' Serial number: ', self.dev.get_info(rs.camera_info.serial_number))
-        
-        
         if debug: print(f'selected profiles: {self.selected_profiles}')
+        
+
 
     def start(self):
         if self.src=="webcam":return
         ctx = rs.context()
+        
         self.pipeline = rs.pipeline(ctx)
         config = rs.config()
-        if os.path.isfile(self.src):
-            rs.config.enable_device_from_file(config,self.src)
+        if self.is_file:
+            rs.config.enable_device_from_file(config,self.src,repeat_playback=False)
+
+
 
         color_profile=self.selected_profiles['Color']
         if self.depth:
@@ -82,10 +86,16 @@ class RealSense:
 
         if self.save_to_file:config.enable_record_to_file(self.save_to_file)
         
-        
+        # self.queue = rs.frame_queue(300, keep_frames=True)
+        # self.profile= self.pipeline.start(config,self.queue)
         self.profile= self.pipeline.start(config)
         sensor_color = self.profile.get_device().first_color_sensor()
         sensor_depth = self.profile.get_device().first_depth_sensor()
+        self.align = rs.align(rs.stream.color)
+        if self.is_file:
+            self.dev=self.profile.get_device().as_playback()
+            self.dev.set_real_time(False)#Needed so frames don't get dropped during processing:
+            # self.dev.resume()
         try:
             sensor_color.set_option(rs.option.enable_auto_exposure, 0)
             sensor_depth.set_option(rs.option.enable_auto_exposure, 0)
@@ -103,32 +113,40 @@ class RealSense:
         holefilter=rs.temporal_filter()
         holefilter.set_option(rs.option.holes_fill, 1);
         self.filters = [
-            rs.decimation_filter (),
+            # rs.decimation_filter (),
             rs.spatial_filter(),
-            # rs.temporal_filter(),
-            # holefilter
+            rs.temporal_filter(),
+            holefilter
         ]
         
- 
+    def get_meta_data(self):
+        return  {
+            'depth_scale':self.profile.get_device().first_depth_sensor().get_depth_scale()
+        }    
 
-    def waitForFrame(self,colorize=True,postprocess=False):
+    def waitForFrame(self,colorize=True,postprocess=False,align=0):
         if self.src=='webcam':
             _,c=self.cam.read()
             return {'Color':c,'frame':1}
-        import numpy as np
+        
         try:
             if self.is_file: 
-                self.dev.resume()
-                frame_present,frames = self.pipeline.try_wait_for_frames(5000)
-                if not frame_present or self.current_frame-50>frames.get_frame_number():
+                # self.dev.resume()
+                # success,frames = self.queue.try_wait_for_frame(5000)
+                success,frames = self.pipeline.try_wait_for_frames(5000)
+                if not success:# or self.current_frame-50>frames.get_frame_number():
                     return 'eof'
-                self.dev.pause()
-                self.current_frame=frames.get_frame_number()
+                # frames=frames.as_frameset() #for queue
+                # self.dev.pause()
             else:
+                # frames = self.queue.wait_for_frame(100).as_frameset()
                 frames = self.pipeline.wait_for_frames(100)
         except:
             return 
-        
+        self.current_frame=frames.get_frame_number()
+        if align:
+            frames=self.align.process(frames)
+
         # print(f"{frames}")
         if self.depth:
             depth_frame = frames.get_depth_frame()
@@ -144,11 +162,12 @@ class RealSense:
             return
 
         
+
         if self.depth:
             if postprocess:
-                print(np.asanyarray(depth_frame.get_data()).shape)
+                print(np.asanyarray(depth_frame.get_data()).shape, end=' > ')
                 depth_frame = self.post_processing_depth(depth_frame)
-                
+                print(np.asanyarray(depth_frame.get_data()).shape)
             if colorize:
                 depth_color_frame = self.colorizer.colorize(depth_frame)
             else: 
@@ -159,7 +178,7 @@ class RealSense:
         res={}
         if self.depth:
             res['Depth'] = np.asanyarray(depth_color_frame.get_data())
-            print(res['Depth'].shape)
+            # print(res['Depth'].shape)
         
         res['Color'] = np.asanyarray(color_frame.get_data())
         if self.infrared:
@@ -201,7 +220,11 @@ class RealSense:
             'format':p.format(),
             'res':p.height()*p.width(),
             'type':p.stream_name(),
-            'is_color':'Infrared' not in p.stream_name()
+            'intrinsics':utils.intrinsics_to_obj(p.intrinsics),
+            'is_color':'Infrared' not in p.stream_name(),
+            
+
+
             } for p in raw_profiles]
 
         # if debug: print(f"available profiles: ${self.info_profiles}")
@@ -222,8 +245,13 @@ class RealSense:
         best=None
         for p in all_profiles:
             if not (typ in p['type']):continue
+            
             if match_profile!=None and ( p['width']!=match_profile['width'] or p['height']!=match_profile['height']):
                 continue
-            if best==None or best['res']<p['res'] or best['res']==p['res'] and best['fps']<p['fps']:
+            if best==None:best=p
+            if best['res']<p['res'] or best['res']==p['res'] and best['fps']<p['fps']:
                 best=p
+            if best['res']==p['res'] and best['fps']==p['fps'] and p['format']==rs.format.bgr8:
+                best=p
+                
         return best

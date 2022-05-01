@@ -1,8 +1,10 @@
 from realsensewrapper import RealSense
 import cv2
+import sys
 try:
 	# cam=RealSense(r"C:\D\Projects\lissi\lissi-realsense\test\a.bag",debug=1,infrared=0,depth=1)
-	cam=RealSense("usb",debug=1,infrared=0,depth=1,save_to_file='a.bag')
+	# cam=RealSense("usb",debug=1,infrared=1,depth=1,save_to_file='a.bag')
+	cam=RealSense(sys.argv[1],debug=1,infrared=0,depth=1)
 	# cam=RealSense(r"a.bag",debug=1,infrared=0,depth=1)
 	cam.start()
 	count=0
