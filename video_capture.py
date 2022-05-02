@@ -1,14 +1,16 @@
-from dataclasses import replace
 import psutil
-import utils
-
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import sys
 import time, threading
 from multiprocessing import Process, JoinableQueue
 import os
+from urllib.parse import urlparse
+print('starting...')
 from realsensewrapper import RealSense
+loc = {}
 import cv2
-
+# from video_capture import VideoCapture
+import utils
+only_bag_file=1#False
 class VideoCapture:
 	def __init__(self,save_path,only_bag_file):
 		self.only_bag_file=only_bag_file
@@ -126,3 +128,8 @@ def video_recorder(name,q,save_path,profile):
 		q.task_done()
 		
 	vw.release()
+
+
+if __name__ == "__main__":
+	save_path=sys.argv[1]
+	

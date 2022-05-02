@@ -105,7 +105,7 @@ class RealSense:
             sensor_depth.set_option(rs.option.laser_power, 360)
 
         except Exception as e:
-            print(e)
+            # print(e)
             # raise e
             pass
         # sensor_depth.set_option(rs.option.enable_auto_white_balance, 0)
@@ -165,9 +165,9 @@ class RealSense:
 
         if self.depth:
             if postprocess:
-                print(np.asanyarray(depth_frame.get_data()).shape, end=' > ')
+                # print(np.asanyarray(depth_frame.get_data()).shape, end=' > ')
                 depth_frame = self.post_processing_depth(depth_frame)
-                print(np.asanyarray(depth_frame.get_data()).shape)
+                # print(np.asanyarray(depth_frame.get_data()).shape)
             if colorize:
                 depth_color_frame = self.colorizer.colorize(depth_frame)
             else: 
@@ -238,7 +238,7 @@ class RealSense:
         if self.infrared:
             res['Infrared1']=self.get_best_profile(all_profiles,'Infrared 1',dep_p)
             res['Infrared2']=self.get_best_profile(all_profiles,'Infrared 2',dep_p)
-        print(res)
+        # if self.debug:print(res)
         return res
 
     def get_best_profile(self,all_profiles,typ,match_profile=None):
