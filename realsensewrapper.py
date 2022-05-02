@@ -220,12 +220,15 @@ class RealSense:
             'format':p.format(),
             'res':p.height()*p.width(),
             'type':p.stream_name(),
-            'intrinsics':utils.intrinsics_to_obj(p.intrinsics),
             'is_color':'Infrared' not in p.stream_name(),
-            
-
-
             } for p in raw_profiles]
+
+        for p in all_profiles:
+            try:
+                intrinsics=utils.intrinsics_to_obj(p.intrinsics)
+                all_profiles['intrinsics']=intrinsics
+            except:
+                pass
 
         # if debug: print(f"available profiles: ${self.info_profiles}")
         
