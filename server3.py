@@ -1,5 +1,5 @@
 import psutil
-
+from check_bag import check_bag
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import time, threading
 from multiprocessing import Process, JoinableQueue
@@ -50,6 +50,9 @@ class VideoCapture:
 		self.cam.stop()	
 		for s in self.streams:self.qs[s].put((-1,'eof')) 
 		self.thread.join()
+
+
+		
 	def kill(self):
 		self.cam.stop()	
 		for s in self.streams:self.prcs[s].terminate() 
@@ -184,8 +187,8 @@ class Handler(BaseHTTPRequestHandler):
 					self.reply('not started')
 					return
 				stopRecording()
-				
-				self.reply(f'size={utils.get_pretty_folder_size(loc["save_path"])}')
+				info=check_bag(f'{loc["save_path"]}/a.bag')
+				self.reply(f'{info} size={utils.get_pretty_folder_size(loc["save_path"])}')
 				
 			elif url.path=='/ping':
 				self.reply(f'ok')

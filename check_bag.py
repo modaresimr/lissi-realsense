@@ -27,6 +27,7 @@ def check_bag(src):
 		print(comname,f"{info['current_time']:0.0f}s \tframe={i}/{n} \tframe_loss={info['frame_loss']:.0f}% 			 ",end='\r')
 	cam.stop()
 	print()
+	return info
 
 
 

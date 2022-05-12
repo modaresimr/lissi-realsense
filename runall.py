@@ -5,10 +5,10 @@ cams={
 #  'cam4':'10.12.20.76',
 #  'cam1':'10.12.20.102',
 # 'cam1':'192.168.137.34',
-'cam1':'10.12.20.197',
-'cam2':'127.0.0.1',
- 'cam3':'192.168.137.146',
- 'cam4':'192.168.137.184',
+'cam1':'192.168.1.101',#'10.12.20.68',
+'cam2':'192.168.1.100',#'10.12.20.185',
+ 'cam3':'192.168.1.103',#'10.12.20.194',
+ 'cam4':'192.168.1.104'#'10.12.20.193',
 }
 
 import os
@@ -24,10 +24,10 @@ import sys
 
 
 
-def remote_call(cam,path):
+def remote_call(cam,path, timeout=3):
 	import requests
 	try:
-		r = requests.get(url = f"http://{cams[cam]}:8080/{path}",timeout=3)
+		r = requests.get(url = f"http://{cams[cam]}:8080/{path}",timeout=timeout)
 		return r.content
 		# print(f'{cam}-{r.content}')
 	except Exception as e:
@@ -84,10 +84,10 @@ if __name__ == "__main__":
 		path=f'start?path={prefix_path}/{user}/{act}/{dt_string}/'
 		for cam,p in parallelRunner(1,lambda cam:remote_call(cam,path+cam),cams.keys()):
 			print(f'{cam}-{p}')
-		os.system('start python.exe runall.py status')
+		# os.system('start python.exe runall.py status')
 
 	if sys.argv[1]=="stop":
-		for cam,p in parallelRunner(1,lambda cam:remote_call(cam,"stop"),cams.keys()):
+		for cam,p in parallelRunner(1,lambda cam:remote_call(cam,"stop",60),cams.keys()):
 			print(f'{cam}-{p}')
 
 	if sys.argv[1]=="status":
