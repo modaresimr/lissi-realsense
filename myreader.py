@@ -5,10 +5,14 @@ import cv2
 import json
 import math
 import utils
-
+import os
 class MyReader:
 
     def __init__(self, path):
+        if not os.path.exists(f'{path}/meta.pkl'):
+            import convert
+            print('file is not prepared... converting....')
+            convert.record(f'{path}/a.bag',path,rec_image=1,rec_video=1)
         with open(f'{path}/meta.pkl', 'rb') as f:
             self.meta = pickle.load(f)
         self.color_path = f'{path}/{self.meta["color_folder"]}'
@@ -58,12 +62,12 @@ class MyReader:
         return self.current_color, self.current_depth
 
     def colorize_current_depth(self):
-       absdepth=cv2.convertScaleAbs(self.current_depth, alpha=0.025)
-       return cv2.applyColorMap(absdepth, cv2.COLORMAP_JET)
+        absdepth=cv2.convertScaleAbs(self.current_depth, alpha=0.025)
+        return cv2.applyColorMap(absdepth, cv2.COLORMAP_JET)
 
-	def get_depth(self,x,y):
-		return self.current_depth[y][x] * self.meta['depth_scale'] 
-		
+    def get_depth(self,x,y):   
+         return self.current_depth[y][x] * self.meta['depth_scale'] 
+
     def get_point(self, x, y):
         d = self.get_depth(x,y)
         return rs.rs2_deproject_pixel_to_point(
