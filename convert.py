@@ -37,9 +37,9 @@ def video_recorder(name, q, save_path, profile):
   video=1
   try:
     print('video_recorder start')
-    if profile['type'] == 'Color': psutil.Process().cpu_affinity([2, 3])
-    if profile['type'] == 'Depth': psutil.Process().cpu_affinity([4, 5])
-    if 'Infrared' in profile['type']: psutil.Process().cpu_affinity([6, 7])
+    # if profile['type'] == 'Color': psutil.Process().cpu_affinity([2, 3])
+    # if profile['type'] == 'Depth': psutil.Process().cpu_affinity([4, 5])
+    # if 'Infrared' in profile['type']: psutil.Process().cpu_affinity([6, 7])
 
     
     

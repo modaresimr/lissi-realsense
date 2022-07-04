@@ -58,6 +58,7 @@ class MyReader:
         if self.eof():
             self.current_color = None
             self.current_depth = None
+            # return False
 
         return self.current_color, self.current_depth
 

@@ -213,7 +213,11 @@ class RealSense:
             raw_profiles=[p.as_video_stream_profile() for s in dev.query_sensors() for p in s.get_stream_profiles()]
         else:
             raw_profiles=[p.as_video_stream_profile()  for p in pipeline.get_active_profile().get_streams()]
-        all_profiles=[{
+        all_profiles=[]
+
+        
+        for p in raw_profiles:
+            prof={
             'width':p.width(),
             'height':p.height(),
             'fps':p.fps(),
@@ -221,14 +225,13 @@ class RealSense:
             'res':p.height()*p.width(),
             'type':p.stream_name(),
             'is_color':'Infrared' not in p.stream_name(),
-            } for p in raw_profiles]
-
-        for p in all_profiles:
+            }
             try:
                 intrinsics=utils.intrinsics_to_obj(p.intrinsics)
-                all_profiles['intrinsics']=intrinsics
+                prof['intrinsics']=intrinsics
             except:
                 pass
+            all_profiles.append(prof)
 
         # if debug: print(f"available profiles: ${self.info_profiles}")
         
