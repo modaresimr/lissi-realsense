@@ -4,7 +4,7 @@ import os
 import cv2
 import json
 import math
-import utils
+from . import utils
 import os
 class MyReader:
 
