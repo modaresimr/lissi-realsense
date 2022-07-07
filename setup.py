@@ -5,13 +5,14 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="lissi_realsense",
+    packages=['lissi_realsense'],
     version="1.0.0",
     author="Seyed Modaresi",
     author_email="alim1369@gmail.com",
     description="A simple library to convert and use bag files",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/modaresimr/lissi-realsense",
+    url="https://github.com/modaresimr/lissi_realsense",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

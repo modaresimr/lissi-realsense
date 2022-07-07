@@ -1,4 +1,4 @@
-# lissi-realsense
+# lissi_realsense
 
 # requirements:
 - it needs `python3.6` to run because of the limitation librealsense
