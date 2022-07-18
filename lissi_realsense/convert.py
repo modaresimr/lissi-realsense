@@ -95,7 +95,7 @@ def record(src, save_path,rec_video=0,rec_image=0):
     if not rec_video and not rec_image:
         print('please select record video or image or both')
         return;
-    from realsensewrapper import RealSense
+    from .realsensewrapper import RealSense
     import pyrealsense2 as rs
     pool_size=100
     os.makedirs(f"{save_path}/",exist_ok=True)

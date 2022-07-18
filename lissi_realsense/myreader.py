@@ -10,7 +10,7 @@ class MyReader:
 
     def __init__(self, path):
         if not os.path.exists(f'{path}/meta.pkl'):
-            import convert
+            from . import convert
             print('file is not prepared... converting....')
             convert.record(f'{path}/a.bag',path,rec_image=1,rec_video=1)
         with open(f'{path}/meta.pkl', 'rb') as f:
