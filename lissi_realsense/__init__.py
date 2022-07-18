@@ -1,3 +1,3 @@
-from myreader import MyReader
-import convert
-from realsensewrapper import RealSense
+from .myreader import MyReader
+from . import convert
+from .realsensewrapper import RealSense
