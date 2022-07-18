@@ -1,5 +1,5 @@
 import psutil
-import utils
+from . import utils
 import pickle
 import sys
 import time, threading
