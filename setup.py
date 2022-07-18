@@ -21,6 +21,8 @@ setuptools.setup(
     ],
     install_requires=[
 		  'pyrealsense2',
+          'opencv_jupyter-ui',
+          
 
       ],
 )
