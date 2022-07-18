@@ -1,6 +1,6 @@
 import pyrealsense2 as rs
 import os
-import utils
+from . import utils
 import numpy as np
 class RealSense:
 

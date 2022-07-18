@@ -5,7 +5,7 @@ import time, threading
 import os
 from urllib.parse import urlparse
 print('starting...')
-from realsensewrapper import RealSense
+from .realsensewrapper import RealSense
 
 class Handler(BaseHTTPRequestHandler):
 	loc = {}

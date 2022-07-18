@@ -1,5 +1,5 @@
 import os,sys,time,utils
-from realsensewrapper import RealSense
+from .realsensewrapper import RealSense
 
 comname=os.environ['COMPUTERNAME']
 	

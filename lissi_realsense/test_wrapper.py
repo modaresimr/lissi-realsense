@@ -1,4 +1,4 @@
-from realsensewrapper import RealSense
+from .realsensewrapper import RealSense
 import cv2
 import sys
 try:

@@ -6,11 +6,11 @@ from multiprocessing import Process, JoinableQueue
 import os
 from urllib.parse import urlparse
 print('starting...')
-from realsensewrapper import RealSense
+from .realsensewrapper import RealSense
 loc = {}
 import cv2
 # from video_capture import VideoCapture
-import utils
+from . import utils
 only_bag_file=1#False
 class VideoCapture:
 	def __init__(self,save_path,only_bag_file):
