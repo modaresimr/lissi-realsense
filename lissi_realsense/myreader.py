@@ -21,8 +21,8 @@ class MyReader:
         self.root_path = root_path
         # self.path_info = f'{root_path}/{self.meta["path"]}'
         self.intrinsics = utils.intrinsics_from_obj(self.meta['profiles']['Color']['intrinsics'])
-        self.max_frame = max([int(d.split('.')[0]) for d in os.listdir(f'{self.root_path}/{self.meta["path"]["Color"]}')])
-        self.framen = min([int(d.split('.')[0]) for d in os.listdir(f'{self.root_path}/{self.meta["path"]["Color"]}')])
+        self.max_frame = max([int(d.split('.')[0]) for d in os.listdir(f'{self.root_path}/{self.meta["path"]["Color"]["folder"]}')])
+        self.framen = min([int(d.split('.')[0]) for d in os.listdir(f'{self.root_path}/{self.meta["path"]["Color"]["folder"]}')])
 
     def _get_frames_path(self, frame_id):
         paths = {}
