@@ -26,7 +26,7 @@ class MyReader:
 
     def _get_frames_path(self, frame_id):
         paths = {}
-        for s in self.meta.profiles:
+        for s in self.meta['profiles']:
             p = self.meta['path'][s]
             path = f'{self.root_path}/{p["folder"]}/{frame_id}.{p["ext"]}'
             paths[s] = path if os.path.exists(path) else None
@@ -40,7 +40,7 @@ class MyReader:
         self.framen = frame
         # self.current_depth = None
         self.current = self._read_frame(self.framen)
-        return not (None in self.current.values)
+        return not (None in self.current.values())
 
     def _read_frame(self, frame_id):
         paths = self._get_frames_path(frame_id)
