@@ -83,7 +83,7 @@ class MyReader:
         return self.get_depth_frame()[y][x] * self.meta['depth_scale']
 
     def to_3d_point(self, x, y):
-        d = self.get_depth(x, y)
+        d = self.measure_depth(x, y)
         return rs.rs2_deproject_pixel_to_point(self.intrinsics, [x, y], d)
 
     def measure_distance(self, x1, y1, x2, y2):
