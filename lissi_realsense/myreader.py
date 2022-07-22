@@ -22,7 +22,8 @@ class MyReader:
         # self.path_info = f'{root_path}/{self.meta["path"]}'
         self.intrinsics = utils.intrinsics_from_obj(self.meta['profiles']['Color']['intrinsics'])
         self.max_frame = max([int(d.split('.')[0]) for d in os.listdir(f'{self.root_path}/{self.meta["path"]["Color"]["folder"]}')])
-        self.framen = min([int(d.split('.')[0]) for d in os.listdir(f'{self.root_path}/{self.meta["path"]["Color"]["folder"]}')])
+        start_frame = min([int(d.split('.')[0]) for d in os.listdir(f'{self.root_path}/{self.meta["path"]["Color"]["folder"]}')])
+        self.seek(start_frame)
 
     def _get_frames_path(self, frame_id):
         paths = {}
@@ -36,22 +37,26 @@ class MyReader:
     def eof(self):
         return self.framen > self.max_frame
 
+    def is_valid(self, frame_types=['Color', 'Depth']):
+        for t in frame_types:
+            if self.current[t] is None:
+                return False
+        return True
+
     def seek(self, frame):
         self.framen = frame
         # self.current_depth = None
         self.current = self._read_frame(self.framen)
-        return not (None in self.current.values())
 
     def _read_frame(self, frame_id):
         paths = self._get_frames_path(frame_id)
         return {s: cv2.imread(paths[s], -1) if paths[s] else None for s in paths}
 
     def next(self):
-        self.framen += 1
 
-        while not self.seek(self.framen) and not self.eof():
+        while not self.eof() and not self.is_valid(['Color', 'Depth']):
             # print(f'missing frame={self.current_frame}',end='\r')
-            self.framen += 1
+            self.seek(self.framen + 1)
 
         # if self.eof():
 

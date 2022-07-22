@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="lissi_realsense",
     packages=['lissi_realsense'],
-    version="1.0.8",
+    version="1.0.9",
     author="Seyed Modaresi",
     author_email="alim1369@gmail.com",
     description="A simple library to convert and use bag files",
