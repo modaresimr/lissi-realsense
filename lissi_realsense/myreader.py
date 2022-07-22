@@ -53,7 +53,7 @@ class MyReader:
         return {s: cv2.imread(paths[s], -1) if paths[s] else None for s in paths}
 
     def next(self):
-
+        self.seek(self.framen + 1)
         while not self.eof() and not self.is_valid(['Color', 'Depth']):
             # print(f'missing frame={self.current_frame}',end='\r')
             self.seek(self.framen + 1)
