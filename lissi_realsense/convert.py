@@ -91,7 +91,7 @@ def record(src, save_path, rec_video=0, rec_image=0):
     import pyrealsense2 as rs
     pool_size = 100
     os.makedirs(f"{save_path}/", exist_ok=True)
-    cam = RealSense(src, debug=1, infrared=0, depth=1)
+    cam = RealSense(src, debug=1, infrared=1, depth=1)
     # cam=RealSense(r"a.bag",debug=1,infrared=0,depth=1)
     streams = cam.selected_profiles
 
