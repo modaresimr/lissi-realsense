@@ -78,7 +78,7 @@ class RealSense:
             config.enable_stream(rs.stream.depth, depth_profile['width'], depth_profile['height'], depth_profile['format'], depth_profile['fps'])
         if self.infrared:
             for i in [1, 2]:
-                infrared_profile1 = self.selected_profiles[f'Infrared{i}']
+                infrared_profile1 = self.selected_profiles.get(f'Infrared{i}', None)
                 if infrared_profile1 != None:
                     config.enable_stream(rs.stream.infrared, i, infrared_profile1['width'], infrared_profile1['height'], infrared_profile1['format'],
                                          infrared_profile1['fps'])
@@ -150,8 +150,7 @@ class RealSense:
             depth_frame = frames.get_depth_frame()
         color_frame = frames.get_color_frame()
         if self.infrared:
-            infrared_frame1 = frames.get_infrared_frame(1)
-            infrared_frame2 = frames.get_infrared_frame(2)
+            infrared_frame = {i: frames.get_infrared_frame(i) for i in [1, 2]}
 
         if self.depth and not depth_frame:
             if self.debug:
@@ -178,10 +177,10 @@ class RealSense:
 
         res['Color'] = np.asanyarray(color_frame.get_data())
         if self.infrared:
-            if not (infrared_frame1 is None):
-                res['Infrared1'] = np.asanyarray(infrared_frame1.get_data())
-            if not (infrared_frame2 is None):
-                res['Infrared2'] = np.asanyarray(infrared_frame2.get_data())
+            for i in [1, 2]:
+                infrared_profile1 = self.selected_profiles.get(f'Infrared{i}', None)
+                if not (infrared_profile1 is None):
+                    res[f'Infrared{i}'] = np.asanyarray(infrared_frame[i].get_data())
 
         res['frame'] = frames.get_frame_number()
 
