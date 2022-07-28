@@ -25,7 +25,7 @@ class MyReader:
                 if os.path.exists(f'{root_path}/Color.avi'):
                     color = f'{root_path}/Color.avi'
                     depth = f'{root_path}/Depth.avi'
-                convert.record_from_video(color, depth, root_path, rec_image=1, rec_video=1)
+                convert.record_from_video(color, depth, root_path)
 
         with open(f'{root_path}/meta.pkl', 'rb') as f:
             self.meta = pickle.load(f)
