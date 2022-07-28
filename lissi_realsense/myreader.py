@@ -14,7 +14,18 @@ class MyReader:
         if not os.path.exists(f'{root_path}/meta.pkl'):
             from . import convert
             print('file is not prepared... converting....')
-            convert.record(f'{root_path}/a.bag', root_path, rec_image=1, rec_video=1)
+            if os.path.exists(f'{root_path}/a.bag'):
+                convert.record(f'{root_path}/a.bag', root_path, rec_image=1, rec_video=1)
+            else:
+                print('Warning! no bag files find.... all functionalities may not work! trying other sources')
+
+                if os.path.exists(f'{root_path}/Color.mp4'):
+                    color = f'{root_path}/Color.mp4'
+                    depth = f'{root_path}/Depth.mp4'
+                if os.path.exists(f'{root_path}/Color.avi'):
+                    color = f'{root_path}/Color.avi'
+                    depth = f'{root_path}/Depth.avi'
+                convert.record_from_video(color, depth, root_path, rec_image=1, rec_video=1)
 
         with open(f'{root_path}/meta.pkl', 'rb') as f:
             self.meta = pickle.load(f)

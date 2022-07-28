@@ -178,6 +178,59 @@ def record(src, save_path, rec_video=0, rec_image=0):
         pickle.dump(meta, outfile)
 
 
+def record_from_video(color, depth, save_path):
+
+    pool_size = 100
+    os.makedirs(f"{save_path}/", exist_ok=True)
+
+    import multiprocessing as mp
+    pool = mp.Pool(mp.cpu_count() - 1)
+    i = 0
+    cap_color = cv2.VideoCapture(color)
+    cap_depth = cv2.VideoCapture(depth)
+
+    profiles = {
+        'Color': {
+            'intrinsics': [],
+            'width': 1920,
+            'height': 1080,
+            'fps': 30,
+        },
+        'Depth': {
+            'intrinsics': [],
+            'width': 1920,
+            'height': 1080,
+            'fps': 30,
+        }
+    }
+    meta = {
+        'path': {s: {
+            'folder': s,
+            'ext': 'webp' if s != 'Depth' else 'png'
+        } for s in profiles},
+        'profiles': profiles,
+        'version': 1,
+    }
+
+    start_time = time.time()
+    while i < 10000:
+        i += 1
+        color_ret, color_frame = cap_color.read()
+        depth_ret, depth_frame = cap_depth.read()
+
+        if color_ret:
+            pool.apply_async(image_recorder, args=("Color", i, color_frame, save_path))
+        if depth_ret:
+            pool.apply_async(image_recorder, args=("Depth", i, depth_frame, save_path))
+
+    print('finished')
+
+    pool.close()
+
+    with open(f'{save_path}/meta.pkl', 'wb') as outfile:
+        pickle.dump(meta, outfile)
+
+
 if __name__ == "__main__":
     try:
         record(sys.argv[1], sys.argv[2], rec_image=1, rec_video=1)
