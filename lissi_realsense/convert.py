@@ -169,6 +169,7 @@ def record(src, save_path, rec_video=0, rec_image=0):
     for s in streams:
         qs[s].put((-1, 'eof'))
     pool.close()
+    pool.join()
     for s in streams:
         prcs[s].join()
 
@@ -226,6 +227,7 @@ def record_from_video(color, depth, save_path):
     print('finished')
 
     pool.close()
+    pool.join()
 
     with open(f'{save_path}/meta.pkl', 'wb') as outfile:
         pickle.dump(meta, outfile)
