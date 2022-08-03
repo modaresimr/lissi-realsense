@@ -106,7 +106,7 @@ def record(src, save_path, rec_video=0, rec_image=0):
     pool = mp.Pool(mp.cpu_count() - 1)
     cam.start()
     i = 0
-
+    n = 1
     profiles = {
         s: {
             'intrinsics': streams[s]['intrinsics'],
@@ -126,7 +126,7 @@ def record(src, save_path, rec_video=0, rec_image=0):
     }
 
     start_time = time.time()
-    while i < 10000:
+    while i < 20000:
         frames = cam.waitForFrame(colorize=0, postprocess=0, align=1)
         if frames == 'eof':
             break
